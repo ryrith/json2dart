@@ -56,7 +56,17 @@ template = """
     </main> 
     <footer class="container-fluid text-muted">
         <p>(C) 2018 Json to Dart, Hope you enjoy!</p>
-    </footer> 
+    </footer>
+    
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-31316241-12"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'UA-31316241-12');
+    </script>
 </body>
 <html>
 """
@@ -78,7 +88,7 @@ def home():
                                       dart=dart)
     else:
         data = json.dumps(sample)
-        dart = ""
+        dart = to_dart(sample)
         return render_template_string(template,
                                       json=data,
                                       dart=dart)
@@ -88,71 +98,31 @@ def to_dart(data):
     if not isinstance(data, dict):
         return 'Not support!'
     dart_template = \
-        """
-        class {{class_name}} {
-          {% for f in fields %}
-          {{f.datatype }} {{ f.name }};
-          {% endfor %} 
-        
-          {{class_name}}({
-            {% for f in fields -%}
+    """
+    class {{class_name}}{  {% for f in fields %}
+      {{f.datatype }} {{ f.name }};{% endfor %} 
+    
+      {{class_name}}( 
+        {% for f in fields -%}
             this.{{f.name}},
-            {%- endfor %}
-          });
-          
-          factory {{class_name}}.fromJson(Map<String,dynamic> json){
-            return {{class_name}}(
-            {% for f in fields %}
-            {{f.name}}: json['{{f.name}}'],
-            {% endfor %}
-            );
-          }
-          
-          Map<String, dynamic> toJson() => {
-            {% for f in fields %} 
-            '{{f.name}}': {{f.name}},
-            {% endfor %}
-          };
-        }
-        """
-    '''
-    class {{class_name}} {
-          {% for f in fields %}
-          {{ f.name }} {{f.type }};
-          {% endfor %}
-          String id;
-          String name;
-          String full_name;
-        
-          {{class_name}}({
-            {% for f in fields %}
-            this.{{f.name}},
-            {% endfor %}
-          });
-          
-          factory {{class_name}}.fromJson(Map<String,dynamic> json){
-            return {{class_name}}(
-            {% for f in fields %}
-            {{f.name}}: json['{{f.name}}'],
-            {% endfor %}
-            );
-          }
-        
-          Map<String, dynamic> toJson() => {
-
-            'avatarUrl': name,
-            'name': full_name,
-            {% for f in fields %}
-            {: json['{{f.name}}'],
-            '{k}': id,
-            {% endfor %}
-          };
-        }
-        '''
+        {%- endfor %}
+      });
+      
+      factory {{class_name}}.fromJson(Map<String,dynamic> json){
+        return {{class_name}}( {% for f in fields %}
+            {{f.name}}: json['{{f.name}}'],{% endfor %}
+        );
+      }
+      
+      Map<String, dynamic> toJson() => { {% for f in fields %}
+            '{{f.name}}': {{f.name}},{% endfor %}
+      };
+    }
+    """
     class_name = 'RootObject'
     fields = []  # [{'name': 'username', 'datatype': 'String'}]
 
-    for k, v in data.iteritems():
+    for (k, v) in data.items():
         fields.append({
             'name': k,
             'datatype': 'String'
@@ -160,7 +130,12 @@ def to_dart(data):
     return render_template_string(dart_template, class_name=class_name, fields=fields)
 
 
+@app.errorhandler(Exception)
+def handle_global_error(err):
+    return "Opps, server error!<br />" + str(err)
+
+application = app
 if __name__ == '__main__':
-    app.debug = True
-    app.usereloader = True
+    # app.debug = True
+    # app.usereloader = True
     app.run()
